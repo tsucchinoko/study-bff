@@ -1,17 +1,17 @@
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { registerRootComponent } from 'expo';
-import { WeatherScreen } from './features/weather/WeatherScreen';
+import { DashboardScreen } from './features/dashboard/DashboardScreen';
 
 function App() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       <View style={styles.header}>
-        <Text style={styles.title}>Weather</Text>
-        <Text style={styles.subtitle}>BFF Study - Mobile</Text>
+        <Text style={styles.title}>City Dashboard</Text>
+        <Text style={styles.subtitle}>BFF Study - Mobile（3サービス集約）</Text>
       </View>
-      <WeatherScreen />
+      <DashboardScreen />
     </SafeAreaView>
   );
 }
