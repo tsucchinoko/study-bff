@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Weather Dashboard Mobile",
+    "slug": "weather-dashboard-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "backgroundColor": "#0066cc"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0066cc"
+      }
+    }
+  }
+}
