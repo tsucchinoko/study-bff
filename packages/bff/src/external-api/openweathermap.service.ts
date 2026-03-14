@@ -28,28 +28,19 @@ export class OpenWeatherMapService {
 
   /** 現在の天気を取得 */
   async getCurrentWeather(city: string): Promise<OWMCurrentResponse> {
-    try {
-      const { data } = await firstValueFrom(
-        this.httpService.get<OWMCurrentResponse>(`${this.baseUrl}/weather`, {
-          params: {
-            q: city,
-            appid: this.apiKey,
-            units: 'metric', // 摂氏
-            lang: 'ja',
-          },
-        }),
-      );
-      return data;
-    } catch (error: any) {
-      this.handleApiError(error, city);
-    }
+    return this.fetchFromApi<OWMCurrentResponse>('weather', city);
   }
 
   /** 5日間予報を取得 */
   async getForecast(city: string): Promise<OWMForecastResponse> {
+    return this.fetchFromApi<OWMForecastResponse>('forecast', city);
+  }
+
+  /** 共通のAPI呼び出し */
+  private async fetchFromApi<T>(endpoint: string, city: string): Promise<T> {
     try {
       const { data } = await firstValueFrom(
-        this.httpService.get<OWMForecastResponse>(`${this.baseUrl}/forecast`, {
+        this.httpService.get<T>(`${this.baseUrl}/${endpoint}`, {
           params: {
             q: city,
             appid: this.apiKey,
@@ -64,32 +55,22 @@ export class OpenWeatherMapService {
     }
   }
 
+  private static readonly errorStatusMap = new Map<number, { message: string | ((city: string) => string); status: HttpStatus }>([
+    [404, { message: (city: string) => `City "${city}" not found`, status: HttpStatus.NOT_FOUND }],
+    [401, { message: 'Weather API authentication failed', status: HttpStatus.INTERNAL_SERVER_ERROR }],
+    [429, { message: 'Weather API rate limit exceeded. Please try again later.', status: HttpStatus.TOO_MANY_REQUESTS }],
+  ]);
+
   /** 外部APIエラーをクライアント向けに変換 */
   private handleApiError(error: any, city: string): never {
     const status = error?.response?.status;
+    const mapped = OpenWeatherMapService.errorStatusMap.get(status);
 
-    if (status === 404) {
-      throw new HttpException(
-        `City "${city}" not found`,
-        HttpStatus.NOT_FOUND,
-      );
-    }
-    if (status === 401) {
-      throw new HttpException(
-        'Weather API authentication failed',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-    if (status === 429) {
-      throw new HttpException(
-        'Weather API rate limit exceeded. Please try again later.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+    if (mapped) {
+      const message = typeof mapped.message === 'function' ? mapped.message(city) : mapped.message;
+      throw new HttpException(message, mapped.status);
     }
 
-    throw new HttpException(
-      'Failed to fetch weather data',
-      HttpStatus.BAD_GATEWAY,
-    );
+    throw new HttpException('Failed to fetch weather data', HttpStatus.BAD_GATEWAY);
   }
 }

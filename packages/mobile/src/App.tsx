@@ -1,8 +1,9 @@
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { registerRootComponent } from 'expo';
 import { WeatherScreen } from './features/weather/WeatherScreen';
 
-export default function App() {
+function App() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
@@ -33,3 +34,5 @@ const styles = StyleSheet.create({
     color: '#888',
   },
 });
+
+registerRootComponent(App);

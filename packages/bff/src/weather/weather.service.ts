@@ -9,6 +9,21 @@ import {
 import type { WebWeatherResponse } from '@study-bff/shared';
 import type { MobileWeatherResponse, DailyForecast } from '@study-bff/shared';
 
+/** 3時間毎の予報データをWeb向け形式に変換 */
+const toHourlyForecast = (item: OWMForecastResponse['list'][number]) => ({
+  dateTime: item.dt_txt,
+  temperature: item.main.temp,
+  feelsLike: item.main.feels_like,
+  humidity: item.main.humidity,
+  description: item.weather[0].description,
+  icon: item.weather[0].icon,
+  windSpeed: item.wind.speed,
+  pop: item.pop,
+});
+
+/** 温度を小数第1位に丸める */
+const roundTemp = (temp: number): number => Math.round(temp * 10) / 10;
+
 /** キャッシュされる生データ */
 interface RawWeatherData {
   current: OWMCurrentResponse;
@@ -42,35 +57,26 @@ export class WeatherService {
    */
   async getForWeb(city: string): Promise<WebWeatherResponse> {
     const raw = await this.getRawData(city);
+    const { main, wind, weather, visibility, clouds, sys } = raw.current;
 
     return {
       city: raw.current.name,
-      country: raw.current.sys.country,
+      country: sys.country,
       current: {
-        temperature: raw.current.main.temp,
-        feelsLike: raw.current.main.feels_like,
-        humidity: raw.current.main.humidity,
-        pressure: raw.current.main.pressure,
-        windSpeed: raw.current.wind.speed,
-        windDirection: raw.current.wind.deg,
-        description: raw.current.weather[0].description,
-        icon: raw.current.weather[0].icon,
-        visibility: raw.current.visibility,
-        clouds: raw.current.clouds.all,
-        sunrise: new Date(raw.current.sys.sunrise * 1000).toISOString(),
-        sunset: new Date(raw.current.sys.sunset * 1000).toISOString(),
+        temperature: main.temp,
+        feelsLike: main.feels_like,
+        humidity: main.humidity,
+        pressure: main.pressure,
+        windSpeed: wind.speed,
+        windDirection: wind.deg,
+        description: weather[0].description,
+        icon: weather[0].icon,
+        visibility,
+        clouds: clouds.all,
+        sunrise: new Date(sys.sunrise * 1000).toISOString(),
+        sunset: new Date(sys.sunset * 1000).toISOString(),
       },
-      // 3時間毎の予報をそのまま返す
-      forecast: raw.forecast.list.map((item) => ({
-        dateTime: item.dt_txt,
-        temperature: item.main.temp,
-        feelsLike: item.main.feels_like,
-        humidity: item.main.humidity,
-        description: item.weather[0].description,
-        icon: item.weather[0].icon,
-        windSpeed: item.wind.speed,
-        pop: item.pop,
-      })),
+      forecast: raw.forecast.list.map(toHourlyForecast),
       meta: {
         cachedAt: raw.cachedAt,
         source: 'OpenWeatherMap',
@@ -96,7 +102,6 @@ export class WeatherService {
         description: raw.current.weather[0].description,
         icon: raw.current.weather[0].icon,
       },
-      // 3時間毎の予報を日別に集約
       dailyForecast: this.aggregateToDailyForecast(raw.forecast),
     };
   }
@@ -143,36 +148,26 @@ export class WeatherService {
   private aggregateToDailyForecast(
     forecast: OWMForecastResponse,
   ): DailyForecast[] {
-    const dailyMap = new Map<
-      string,
-      { temps: number[]; description: string; icon: string }
-    >();
+    const dailyMap = forecast.list.reduce(
+      (map, item) => {
+        const date = item.dt_txt.split(' ')[0]; // "2026-03-15"
+        const existing = map.get(date);
 
-    for (const item of forecast.list) {
-      const date = item.dt_txt.split(' ')[0]; // "2026-03-15"
-
-      if (!dailyMap.has(date)) {
-        dailyMap.set(date, {
-          temps: [],
-          description: item.weather[0].description,
-          icon: item.weather[0].icon,
+        return map.set(date, {
+          temps: [...(existing?.temps ?? []), item.main.temp],
+          description: existing?.description ?? item.weather[0].description,
+          icon: existing?.icon ?? item.weather[0].icon,
         });
-      }
+      },
+      new Map<string, { temps: number[]; description: string; icon: string }>(),
+    );
 
-      dailyMap.get(date)!.temps.push(item.main.temp);
-    }
-
-    const result: DailyForecast[] = [];
-    for (const [date, data] of dailyMap) {
-      result.push({
-        date,
-        high: Math.round(Math.max(...data.temps) * 10) / 10,
-        low: Math.round(Math.min(...data.temps) * 10) / 10,
-        description: data.description,
-        icon: data.icon,
-      });
-    }
-
-    return result.slice(0, 5); // 最大5日分
+    return Array.from(dailyMap, ([date, data]) => ({
+      date,
+      high: roundTemp(Math.max(...data.temps)),
+      low: roundTemp(Math.min(...data.temps)),
+      description: data.description,
+      icon: data.icon,
+    })).slice(0, 5); // 最大5日分
   }
 }
