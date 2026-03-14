@@ -1,0 +1,10 @@
+{
+  "name": "study-bff",
+  "private": true,
+  "scripts": {
+    "dev:bff": "pnpm --filter @study-bff/bff start:dev",
+    "dev:web": "pnpm --filter @study-bff/web dev",
+    "dev:mobile": "pnpm --filter @study-bff/mobile start",
+    "build:shared": "pnpm --filter @study-bff/shared build"
+  }
+}
