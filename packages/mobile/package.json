@@ -12,6 +12,7 @@
   "dependencies": {
     "@study-bff/shared": "workspace:*",
     "expo": "~54.0.33",
+    "expo-constants": "~18.0.13",
     "expo-status-bar": "~3.0.9",
     "metro-runtime": "^0.84.2",
     "react": "^19.1.0",
