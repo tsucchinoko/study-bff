@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { WeatherModule } from "./weather/weather.module";
+import { DashboardModule } from "./dashboard/dashboard.module";
 import { ExternalApiModule } from "./external-api/external-api.module";
 import { CacheConfigModule } from "./cache/cache.module";
 
@@ -14,6 +15,7 @@ import { CacheConfigModule } from "./cache/cache.module";
     CacheConfigModule,
     ExternalApiModule,
     WeatherModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}
